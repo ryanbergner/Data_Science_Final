@@ -1,0 +1,987 @@
+---
+title: "null"
+author: "null"
+date: "null"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(knitr)
+```
+
+```{r, include=FALSE}
+# Import starting data
+nlsy <- read_csv("http://www.andrew.cmu.edu/user/achoulde/94842/final_project/nlsy97/nlsy97_Nov2020.csv")
+```
+
+```{r, include=FALSE}
+# Change column names to question name abbreviations (you will want to change these further)
+colnames(nlsy) <- c("PSTRAN_GPA.01_PSTR",
+    "INCARC_TOTNUM_XRND",
+    "INCARC_AGE_FIRST_XRND",
+    "INCARC_LENGTH_LONGEST_XRND",
+    "PUBID_1997",
+    "YSCH-36400_1997",
+    "YSCH-37000_1997",
+    "YSAQ-010_1997",
+    "YSAQ-369_1997",
+    "YEXP-300_1997",
+    "YEXP-1500_1997",
+    "YEXP-1600_1997",
+    "YEXP-1800_1997",
+    "YEXP-2000_1997",
+    "sex",
+    "KEY_BDATE_M_1997",
+    "KEY_BDATE_Y_1997",
+    "PC8-090_1997",
+    "PC8-092_1997",
+    "PC9-002_1997",
+    "PC12-024_1997",
+    "PC12-028_1997",
+    "CV_AGE_12/31/96_1997",
+    "CV_BIO_MOM_AGE_CHILD1_1997",
+    "CV_BIO_MOM_AGE_YOUTH_1997",
+    "CV_CITIZENSHIP_1997",
+    "CV_ENROLLSTAT_1997",
+    "CV_HH_NET_WORTH_P_1997",
+    "CV_YTH_REL_HH_CURRENT_1997",
+    "CV_MSA_AGE_12_1997",
+    "CV_URBAN-RURAL_AGE_12_1997",
+    "CV_SAMPLE_TYPE_1997",
+    "CV_HGC_BIO_DAD_1997",
+    "CV_HGC_BIO_MOM_1997",
+    "CV_HGC_RES_DAD_1997",
+    "CV_HGC_RES_MOM_1997",
+    "race",
+    "YSCH-6800_1998",
+    "YSCH-7300_1998",
+    "YSAQ-372B_1998",
+    "YSAQ-371_2000",
+    "YSAQ-282J_2002",
+    "YSAQ-282Q_2002",
+    "CV_HH_NET_WORTH_Y_2003",
+    "CV_BA_CREDITS.01_2004",
+    "YSAQ-000B_2004",
+    "YSAQ-373_2004",
+    "YSAQ-369_2005",
+    "CV_BIO_CHILD_HH_2007",
+    "YTEL-52~000001_2007",
+    "YTEL-52~000002_2007",
+    "YTEL-52~000003_2007",
+    "YTEL-52~000004_2007",
+    "CV_BIO_CHILD_HH_2009",
+    "CV_COLLEGE_TYPE.01_2011",
+    "CV_INCOME_FAMILY_2011",
+    "CV_HH_SIZE_2011",
+    "CV_HH_UNDER_18_2011",
+    "CV_HH_UNDER_6_2011",
+    "CV_HIGHEST_DEGREE_1112_2011",
+    "CV_BIO_CHILD_HH_2011",
+    "YSCH-3112_2011",
+    "YSAQ-000A000001_2011",
+    "YSAQ-000A000002_2011",
+    "YSAQ-000B_2011",
+    "YSAQ-360C_2011",
+    "YSAQ-364D_2011",
+    "YSAQ-371_2011",
+    "YSAQ-372CC_2011",
+    "YSAQ-373_2011",
+    "YSAQ-374_2011",
+    "YEMP_INDCODE-2002.01_2011",
+    "CV_BIO_CHILD_HH_2015",
+    "YEMP_INDCODE-2002.01_2017",
+    "YEMP_OCCODE-2002.01_2017",
+    "CV_MARSTAT_COLLAPSED_2017",
+    "YINC-1400_2017",
+    "income",
+    "YINC-1800_2017",
+    "YINC-2400_2017",
+    "YINC-2600_2017",
+    "YINC-2700_2017",
+    "CVC_YTH_REL_HH_AGE6_YCHR_XRND",
+    "CVC_SAT_MATH_SCORE_2007_XRND",
+    "CVC_SAT_VERBAL_SCORE_2007_XRND",
+    "CVC_ACT_SCORE_2007_XRND",
+    "CVC_HH_NET_WORTH_20_XRND",
+    "CVC_HH_NET_WORTH_25_XRND",
+    "CVC_ASSETS_FINANCIAL_25_XRND",
+    "CVC_ASSETS_DEBTS_20_XRND",
+    "CVC_HH_NET_WORTH_30_XRND",
+    "CVC_HOUSE_VALUE_30_XRND",
+    "CVC_HOUSE_TYPE_30_XRND",
+    "CVC_ASSETS_FINANCIAL_30_XRND",
+    "CVC_ASSETS_DEBTS_30_XRND")
+
+### Set all negative values to NA.  
+### THIS IS DONE ONLY FOR ILLUSTRATIVE PURPOSES
+### DO NOT TAKE THIS APPROACH WITHOUT CAREFUL JUSTIFICATION
+nlsy[nlsy < 0]  <- NA
+```
+
+```{r, include=FALSE}
+income.clean <- as_tibble(filter(nlsy, !is.na(income)))
+income.clean <- income.clean %>% mutate(sex = recode(sex, `1` = 'Male', `2` = 'Female'))
+income.vs.sex.lm <- lm(income ~ sex, income.clean)
+income.vs.sex.lm.sum <- summary(income.vs.sex.lm)
+base.income.gap.p.val <- income.vs.sex.lm.sum$coefficients[8]
+base.income.gap <- format(income.vs.sex.lm.sum$coefficients[2], big.mark = ',', nsmall = 2)
+base.income.gap.size <- income.vs.sex.lm.sum$df[2]
+```
+
+# Data Processing and Summarization
+The NLSY97 is a national longitudinal survey initially performed in 1997. The survey consists of a nationally representative sample of 8,984 men and women born in the years 1980-1984. Following the initial year, interviews were conducted annually until 2011 and once every two years after that. The NLSY97 collects extensive information on respondents’ labor market behavior and educational experiences as well as data on their families and community backgrounds. This will prove a valuable tool to assess the impact of education and other environmental factors on the resulting economic factors like income.
+
+Thus, it is worthwhile to examine sex-related differences between respondents of the NLSY97 and determining if there is a significant difference in income
+analyzing sex and other various factors.
+
+To explore the income gap between men and women, a linear regression modeling income as a linear function of gender was performed. Based on this model performed on data representing `r base.income.gap.size` individuals, men earned, on average, $`r base.income.gap` more than females. Furthermore, this income gap can be concluded to be highly significant based on the p-value of the model of approximately `r base.income.gap.p.val`. This income gap can be effectively visualized in the box plot below:
+
+```{r, echo = FALSE}
+qplot(sex, income, geom = 'boxplot', data = income.clean, xlab = 'Gender', ylab = 'Income', fill = sex) + theme(legend.position = 'None')
+```
+
+We can see from the box plot the median values for mean and women's income. Additionally the top and bottoms of those boxes represent the 1st and 3rd quartiles of the data. Roughly looking at the data, the median income was approximately greater than or equal to 75% of women's income. After determining that the was indeed a significant income gap between men and women, the next step was to explore what other factors might contribute to this disparity. We began by investigating our data.
+
+To investigate our data, we constructed a histogram for all of the variables. These show the number of records that we had for each variable. For practically all of the variables, there was a large skew of the data. To account for this, we decided it would be helpful to convert these variables into categories, so there was a more equal representation. For example, the variable of days that a child attended a religious service was approximately 33% with 0 days, 33% 1 day, and the 2-7 days make up the remaining 33%. So, we converted this to categories of no days, one day, and multiple days. For other variables, the split was not as evident, and the skew was shifted. For these variables, we broke the counts into percentiles, and categorized the groups based on that. For example, for mothers birth age, we broke the data into quintiles, and made age range categories for them. 
+
+After categorizing our variables, we also inspected them to see if the data made sense. There was an occurances where the data seemed to be off, which was the biological mother's birth age. For this variable, there were many observations of vary young children having children of their own. To account for this, we replaced any value in this variable that was under 10 with a NA value. We think the reason this happened was due to data input errors
+
+# Methodology
+
+The main approach to analyzing the variables was to minimize the consequences of human interaction, meaning that the variables that were chosen were not controlled by the respondent, such as race and gender. The group decided to not include other variables that are measured by the respondent's performance such as GPA in order to avoid confounding variables for income disparities. Additionally, we decided to consider variables that we only recorded when this survey was originally taken, in order to eliminate choices made by respondents. With this in mind, the data analysis method chosen was analysis of variance (ANOVA), as it would prove valuable to be used for other tests. The group also made use of t-tests.
+
+It is worth mentioning that the income data has been truncated. For the ethical purpose of anonymity, the top 2% of earners' income figures have been hidden. Instead, the income of a top 2% earner is set to the average income of the top 2%. The fact that the data has been topcoded will result in slightly higher discrepancies for males, as only 1 in 20 women that belong in an "elite household" have incomes to qualify for a top 2% earner status. ^[Yavorsky JE, Keister LA, Qian Y, Nau M. Women in the One Percent: Gender Dynamics in Top Income Positions. American Sociological Review. 2019;84(1):54-81. doi:10.1177/0003122418820702] Thus, the displayed results will undermine the true gender discrepancy across each variable, as it ignores the large outliers in income, which are data points belonging mostly to men.
+
+In determining which variables the group would explore further, the group constructed linear regression models. First, we constructed a linear regression model that modeled income based on gender alone. Then, we constructed models that modeled income based on gender and an interaction with our chosen variables. The intent was to have two regression models, and perform an ANOVA to determined whether the interaction of the variable was significant. We decided that a p-value of less than 0.05 would be the cutoff for determining significance. As we performed ANOVA test to determine significance, we ran into an issue with the data frame being of different size. The reason this was the case was because some values of our variables we missing. In order to account for this, we created subsets of the data where there were no missing values in our variables. Then we created a linear regression based on gender alone, and then another one based on gender and the interaction between the variable. This allowed us to perform the ANOVA test. 
+
+After running all of the ANOVA tests to determine whether the interaction was significant, we then explored the variables affect on the income gap. To do so, we either ran a linear regression or performed a t-test. Also, since we were comparing different groups, we decided that it would be appropriate to analyze the percent difference of each category in our variables, so we would be able to compare them. There were a couple variables we did not explore further because the ANOVA test showed that they were not significant, and they can be seen in our findings below.
+
+One variable that is noteworth that we didn't explore was the urban vs rural variable. After performing the ANOVA test on the two models, it was revealed that this was not a siginificant interaction. We thought that this would be because of different opportunities and cultures that exist in urban vs rural settings. 
+
+# Findings
+
+Among the 90 or so selected variables of the data set, the group selected 10 variables. After performing the aforementioned methods on the data from the methodology section, the results were as follows:
+
+```{r, include = FALSE}
+income.clean.renamed <- income.clean %>%
+  rename(citizen.status = `CV_CITIZENSHIP_1997`,
+         household.net.worth = `CV_HH_NET_WORTH_P_1997`,
+         days.religious.activity = `YSAQ-010_1997`,
+         biological.mother.birth.age = CV_BIO_MOM_AGE_CHILD1_1997,
+         parents.relationship.child = CV_YTH_REL_HH_CURRENT_1997,
+         urban.rural = `CV_URBAN-RURAL_AGE_12_1997`,
+         bio.mom.edu = `CV_HGC_BIO_MOM_1997`,
+         bio.dad.edu = `CV_HGC_BIO_DAD_1997`,
+         guard.mom.edu = `CV_HGC_RES_MOM_1997`,
+         guard.dad.edu =`CV_HGC_RES_DAD_1997`)
+
+income.temp <- select(income.clean.renamed, c(sex,
+                               income,
+                               race,
+                               citizen.status,
+                               household.net.worth,
+                               days.religious.activity,
+                               biological.mother.birth.age,
+                               parents.relationship.child,
+                               urban.rural,
+                               bio.mom.edu,
+                               bio.dad.edu,
+                               guard.mom.edu,
+                               guard.dad.edu))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(race = recode(race, `4` = 'Other', `2` = 'Hispanic', `3` = 'Mixed Race', `1` = 'Black'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(citizen.status = recode(citizen.status,
+                                                                                `1` = 'Citizen, Born in the U.S.',
+                                                                                `2` = 'Unknown, Not Born in U.S.',
+                                                                                `3` = 'Unknown, Birthplace Undetermined'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(urban.rural = recode(urban.rural, `0` = 'Rural', `1` = 'Urban', `2` = 'Unknown'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(parents.relationship.child = recode(parents.relationship.child, 
+                                                                                            `1` = 'Both Biological Parents',
+                                                                                            `2` = 'Two Parents, Biological Mother',
+                                                                                            `3` = 'Two Parents, Biological Father',
+                                                                                            `4` = 'Biological Mother Only',
+                                                                                            `5` = 'Biological Father Only',
+                                                                                            `6` = 'Adoptive Parent(s)',
+                                                                                            `7` = 'Foster Parents',
+                                                                                            `8` = 'No Parents, Grandparents',
+                                                                                            `9` = 'No Parents, Other Relatives',
+                                                                                            `10` = 'Anything Else'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(days.religious.activity = recode(days.religious.activity,
+                                                                                         `0` = 'No Days',
+                                                                                         `1` = 'One Day',
+                                                                                         `2` = 'Multiple Days',
+                                                                                         `3` = 'Multiple Days',
+                                                                                         `4` = 'Multiple Days',
+                                                                                         `5` = 'Multiple Days',
+                                                                                         `6` = 'Multiple Days',
+                                                                                         `7` = 'Multiple Days'))
+
+income.clean.renamed[,'biological.mother.birth.age'][income.clean.renamed[,'biological.mother.birth.age'] < 10] <- NA
+income.clean.renamed[,'biological.mother.birth.age'][income.clean.renamed[,'biological.mother.birth.age'] < 19] <- 100
+income.clean.renamed[,'biological.mother.birth.age'][income.clean.renamed[,'biological.mother.birth.age'] <= 21] <- 101
+income.clean.renamed[,'biological.mother.birth.age'][income.clean.renamed[,'biological.mother.birth.age'] <= 24] <- 102
+income.clean.renamed[,'biological.mother.birth.age'][income.clean.renamed[,'biological.mother.birth.age'] <= 27] <- 103
+income.clean.renamed[,'biological.mother.birth.age'][income.clean.renamed[,'biological.mother.birth.age'] <= 99] <- 104
+
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 3000] <- 600001
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 8000] <- 600002
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 18000] <- 600003
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 31000] <- 600004
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 49000] <- 600005
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 73000] <- 600006
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 108000] <- 600007
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 160000] <- 600008
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] < 290000] <- 600009
+income.clean.renamed[,'household.net.worth'][income.clean.renamed[,'household.net.worth'] <= 600000] <- 6000010
+
+income.clean.renamed <- income.clean.renamed %>% mutate(household.net.worth = recode(household.net.worth,
+                                                                                     `600001` = 'Less Than $3,000',
+                                                                                     `600002` = '$3,000 to $7,999',
+                                                                                     `600003` = '$8,000 to $17,999',
+                                                                                     `600004` = '$18,000 to $30,999',
+                                                                                     `600005` = '$31,000 to $48,999',
+                                                                                     `600006` = '$49,000 to $72,999',
+                                                                                     `600007` = '$73,000 to $107,999',
+                                                                                     `600008` = '$108,000 to $159,999',
+                                                                                     `600009` = '$160,000 to $289,999',
+                                                                                     `6000010` = 'Over $290,000'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(bio.mom.edu = recode(bio.mom.edu,
+                                                                             `0` = 'No High School',
+                                                                             `1` = 'No High School',
+                                                                             `2` = 'No High School',
+                                                                             `3` = 'No High School',
+                                                                             `4` = 'No High School',
+                                                                             `5` = 'No High School',
+                                                                             `6` = 'No High School',
+                                                                             `7` = 'No High School',
+                                                                             `8` = 'No High School',
+                                                                             `9` = 'Some High School',
+                                                                             `10` = 'Some High School',
+                                                                             `11` = 'Some High School',
+                                                                             `12` = 'High School',
+                                                                             `13` = 'Some College',
+                                                                             `14` = 'Some College',
+                                                                             `15` = 'Some College',
+                                                                             `16` = 'College',
+                                                                             `17` = 'College',
+                                                                             `18` = 'College',
+                                                                             `19` = 'College',
+                                                                             `20` = 'College'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(bio.dad.edu = recode(bio.dad.edu,
+                                                                             `0` = 'No High School',
+                                                                             `1` = 'No High School',
+                                                                             `2` = 'No High School',
+                                                                             `3` = 'No High School',
+                                                                             `4` = 'No High School',
+                                                                             `5` = 'No High School',
+                                                                             `6` = 'No High School',
+                                                                             `7` = 'No High School',
+                                                                             `8` = 'No High School',
+                                                                             `9` = 'Some High School',
+                                                                             `10` = 'Some High School',
+                                                                             `11` = 'Some High School',
+                                                                             `12` = 'High School',
+                                                                             `13` = 'Some College',
+                                                                             `14` = 'Some College',
+                                                                             `15` = 'Some College',
+                                                                             `16` = 'College',
+                                                                             `17` = 'College',
+                                                                             `18` = 'College',
+                                                                             `19` = 'College',
+                                                                             `20` = 'College'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(guard.mom.edu = recode(guard.mom.edu,
+                                                                             `0` = 'No High School',
+                                                                             `1` = 'No High School',
+                                                                             `2` = 'No High School',
+                                                                             `3` = 'No High School',
+                                                                             `4` = 'No High School',
+                                                                             `5` = 'No High School',
+                                                                             `6` = 'No High School',
+                                                                             `7` = 'No High School',
+                                                                             `8` = 'No High School',
+                                                                             `9` = 'Some High School',
+                                                                             `10` = 'Some High School',
+                                                                             `11` = 'Some High School',
+                                                                             `12` = 'High School',
+                                                                             `13` = 'Some College',
+                                                                             `14` = 'Some College',
+                                                                             `15` = 'Some College',
+                                                                             `16` = 'College',
+                                                                             `17` = 'College',
+                                                                             `18` = 'College',
+                                                                             `19` = 'College',
+                                                                             `20` = 'College'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(guard.dad.edu = recode(guard.dad.edu,
+                                                                             `0` = 'No High School',
+                                                                             `1` = 'No High School',
+                                                                             `2` = 'No High School',
+                                                                             `3` = 'No High School',
+                                                                             `4` = 'No High School',
+                                                                             `5` = 'No High School',
+                                                                             `6` = 'No High School',
+                                                                             `7` = 'No High School',
+                                                                             `8` = 'No High School',
+                                                                             `9` = 'Some High School',
+                                                                             `10` = 'Some High School',
+                                                                             `11` = 'Some High School',
+                                                                             `12` = 'High School',
+                                                                             `13` = 'Some College',
+                                                                             `14` = 'Some College',
+                                                                             `15` = 'Some College',
+                                                                             `16` = 'College',
+                                                                             `17` = 'College',
+                                                                             `18` = 'College',
+                                                                             `19` = 'College',
+                                                                             `20` = 'College'))
+
+income.clean.renamed <- income.clean.renamed %>% mutate(biological.mother.birth.age = recode(biological.mother.birth.age,
+                                                                                         `100` = 'Under 19',
+                                                                                         `101` = '19-21',
+                                                                                         `102` = '22-24',
+                                                                                         `103` = '24-27',
+                                                                                         `104` = 'Over 27'))
+                                                                                      
+income.clean.renamed <- income.clean.renamed %>% mutate(current.age = round(
+                                                          (2020 + (11/12)) - 
+                                                          ((income.clean.renamed$KEY_BDATE_M_1997/12) + 
+                                                             income.clean.renamed$KEY_BDATE_Y_1997), 2))
+```
+
+```{r, include=FALSE}
+income.final <- select(income.clean.renamed, c(sex,
+                               income,
+                               current.age,
+                               race,
+                               citizen.status,
+                               household.net.worth,
+                               days.religious.activity,
+                               biological.mother.birth.age,
+                               parents.relationship.child,
+                               urban.rural,
+                               bio.mom.edu,
+                               bio.dad.edu,
+                               guard.mom.edu,
+                               guard.dad.edu))
+```
+
+In order to determine whether any of the additional factors either exacerbated or mitigated the income gap between men and women, linear regression models were ran to determine the interaction between gender and the additional variables. Then, these models were compared to the linear regression models as a function of only gender using an anova test to determine whether these factors where significant. The resulting p-values from these ANOVA tests can be seen in the table below
+
+```{r, include=FALSE}
+interaction.significance <- data.frame(Factor = character(),
+                                       P.Value = double(),
+                                       Is.Significant = character())
+  
+  
+for (i in colnames(income.final)[3:14]){
+  temp.df <- subset(income.final, !is.na(income.final[[i]]))
+  base.lm <- lm(income ~ sex, temp.df)
+  mod.lm <- lm(paste('income', '~ sex * ', i), temp.df)
+  
+  if (round(anova(base.lm, mod.lm)['Pr(>F)'][2,1],4) > 0.05){
+    sig.test <- 'No'
+  }
+  else
+  {
+    sig.test <- 'Yes'
+  }
+  
+  interaction.significance <- interaction.significance %>% add_row(Factor = i,
+                                                                   P.Value = round(anova(base.lm, mod.lm)['Pr(>F)'][2,1],4),
+                                                                   Is.Significant = sig.test)
+}
+
+interaction.significance <- interaction.significance %>% 
+  rename('Factor' = Factor,
+         'P-Value' = P.Value,
+         'Significant?' = Is.Significant)
+```
+
+```{r, echo = FALSE}
+kable(interaction.significance, align = 'lcc', digits = 3)
+```
+
+
+# Interaction of Age
+```{r, include=FALSE}
+income.gap.vs.age.coef <- coef(summary(lm(income ~ sex * current.age, income.final)))
+female.age.slope <- round(income.gap.vs.age.coef[3], 2)
+female.age.p.val <- round(income.gap.vs.age.coef[15], 4)
+male.age.slope <- round(income.gap.vs.age.coef[4] + female.age.slope, 2)
+male.age.p.val <- round(income.gap.vs.age.coef[16], 4)
+```
+
+Exploring the significance of age on the income gap between men and women reveals some interesting findings. Below is the table showing the coefficients of linear regression modeling income as a linear function of gender interacting with age. 
+
+```{r, echo = FALSE}
+kable(income.gap.vs.age.coef, align = 'lcccc', digits = 3)
+```
+
+As can be seen in the table, the model determined that for females, every year of age corellated with an decrease in income by \$`r format(-female.age.slope, big.mark = ',', nsmall = 2)`. However, the p-value for this correlation was approximately `r female.age.p.val`, indicating that this correlation was not significant. On the other hand, the model determined that for males, every year of age corellated with an increase in income by \$`r format(male.age.slope, big.mark = ',', nsmall = 2)`. This correlation was significant, as indicated by the p-value of approximately `r male.age.p.val`. While the interaction of age was not significant for females, the graph below illustrates that overall, age was significant in the income gap between men and women. 
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(income.final, aes(x = current.age, y = income, color = sex)) + geom_smooth(method = lm) + xlab("Age") + ylab("Income($)") + ggtitle("Linear Male and Female Income Regression, by Age")
+```
+
+Also, we wanted to explore how the model was fit to the data, so we ran diagnostic plots as follows
+
+```{r, echo = FALSE, message = FALSE}
+plot(lm(income ~ sex * current.age, income.final))
+```
+
+After generating plots to evaluate our linear model, we can see our Residuals vs Fitted plot, the points surround the red line in a fairly constant manner despite having a gap from about 42,500 to just above 50,000 which may suggest a linear model is inappropriate. The Normal Q-Q plot is potentially problematic because many of the values don't fit the line at the extreme ends of the data, especially the high end. This may cause our p-values to be invalid. The scale location is very similar to the Residuals vs. Fitted plot which is concerning and may again suggest our model is not appropriate. The Residuals vs Leverage plot shows there are a few points in the data that are outliers (high leverage and residuals) skewing the model, but not too many. Overall, these charts suggest modeling income over sex interacted with age in a linear way may have some drawbacks. Further discrepancies in the correlation of age and gender may be experienced had the data for the top 2% of earners not been truncated, mostly in the male regression line. Considering that most of the incomes of the top 2% of earners are going to be older, male respondents, the regression line may be quite skewed when comparing age and income, resulting in a higher slope for the male interaction with age.
+
+
+# Interaction of Race
+
+To explore the interaction of race on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+income.gap.t.test.vs.race <- income.final %>%
+  group_by(race) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.race <- mutate(income.gap.t.test.vs.race, race = reorder(race, income.gap))
+
+income.gap.t.test.vs.race.present <- income.gap.t.test.vs.race
+
+income.gap.t.test.vs.race.present <- income.gap.t.test.vs.race.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.race.present <- income.gap.t.test.vs.race.present %>%
+  rename( 'Race' = race,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.race.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 17.878% to 36.704% more than females in their respective racial groups. Additionally, it was apparent that the income gap was significant for all of the racial groups, except Mixed Race. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain racial group exacerbates or mitigates the income gap. 
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.race, aes(x = race, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Race") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Race") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12),plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that Black individuals had the lowest income gap, while Hispanic individuals had the highest income gap. Thus, we observe that being Black is a mitigating factor to the income gap, while being Hispanic is an exacerbating factor to the income gap. Once again, there may be discrepancies in the t-test, as the topcoded 2% values may affect the data, especially the "Other Race" category. This would result in a higher Income Gap Percentage for the category, meaning that being another race that is not Hispanic, Black, or Mixed will contribute to differences in income across genders.
+
+# Interaction of Citizen Status
+
+To explore the interaction of citizen status on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+citizen.status.subset <- subset(income.final, !is.na(citizen.status))
+
+income.gap.t.test.vs.citizen.status <- citizen.status.subset %>%
+  group_by(citizen.status) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.citizen.status <- mutate(income.gap.t.test.vs.citizen.status, citizen.status = reorder(citizen.status, income.gap))
+
+income.gap.t.test.vs.citizen.status.present <- income.gap.t.test.vs.citizen.status
+
+income.gap.t.test.vs.citizen.status.present <- income.gap.t.test.vs.citizen.status.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.citizen.status.present <- income.gap.t.test.vs.citizen.status.present %>%
+  rename( 'Citizenship Status' = citizen.status,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.citizen.status.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 28.510% to 35.253% more than females in their respective citizen status groups. Additionally, it was apparent that the income gap was significant for all of the citizen status groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain citizen status group exacerbates or mitigates the income gap. 
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.citizen.status, aes(x = citizen.status, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Citizenship Status") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Citizenship Status") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(axis.text.x = element_text(size=8, angle = 55, hjust = 1), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with an unknown citizen status, and birthplace undetermined had the lowest income gap, while individuals with an unknown citizen status, and not born in the United States had the highest income gap. Thus, we observe that having unknown citizen status, and birthplace undetermined is a mitigating factor to the income gap, while having unknown citizen status, and not being born in the United States is an exacerbating factor to the income gap. The impact of truncated values of the 2% may also impact this t-test confidence interval, though the change would not be as defined as in the previous interactions, as the question posed in the survey will result in mostly U.S. citizens. Adding an extra point, even if it is a big outlier, will not skew the results much.
+
+# Interaction of Household Net Worth
+
+To explore the interaction of household net worth on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+household.net.worth.subset <- subset(income.final, !is.na(household.net.worth))
+
+income.gap.t.test.vs.household.net.worth <- household.net.worth.subset %>%
+  group_by(household.net.worth) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.household.net.worth <- mutate(income.gap.t.test.vs.household.net.worth, household.net.worth = fct_relevel(household.net.worth,
+                                                                                                                               "Less Than $3,000",
+                                                                                                                               "$3,000 to $7,999",
+                                                                                                                               "$8,000 to $17,999",
+                                                                                                                               "$18,000 to $30,999",
+                                                                                                                               "$31,000 to $48,999",
+                                                                                                                               "$49,000 to $72,999",
+                                                                                                                               "$73,000 to $107,999",
+                                                                                                                               "$108,000 to $159,999",
+                                                                                                                               "$160,000 to $289,999",
+                                                                                                                               "Over $290,000"))
+
+income.gap.t.test.vs.household.net.worth.present <- income.gap.t.test.vs.household.net.worth
+
+income.gap.t.test.vs.household.net.worth.present <- income.gap.t.test.vs.household.net.worth.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.household.net.worth.present <- income.gap.t.test.vs.household.net.worth.present %>%
+  rename( 'Household Net Worth' = household.net.worth,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.household.net.worth.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 17.220% to 43.401% more than females in their respective household income groups. Additionally, it was apparent that the income gap was significant for all of the household income groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain household income group exacerbates or mitigates the income gap. 
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.household.net.worth, aes(x = household.net.worth, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Household Net Worth") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Household Net Worth") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(axis.text.x = element_text(size=8, angle = 55, hjust = 1), plot.title = element_text(size = 12))
+```
+From looking at the bar graph, it appears that individuals living in a household with over \$290,000 in annual income had the lowest income gap, while living in a household earning between \$73,000 and \$107,999 in annual income had the highest income gap. Thus, we observe that living in a household with over \$290,000 in annual income is a mitigating factor to the income gap, while living in a household earning between \$73,000 and \$107,999 in annual income is an exacerbating factor to the income gap. Surprisingly, the highest income category has the least contribution to income gap. The top 2% of income earners are defined by incomes between \$309,348 and \$737,697. This means that averaging the incomes of the 2% and comparing that number will not reflect the full discrepancy between genders, resulting in a much lower result, as shown.
+
+# Interaction of Days Religious Activity
+
+To explore the interaction of days of religious activity on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+days.religious.activity.subset <- subset(income.final, !is.na(days.religious.activity))
+
+income.gap.t.test.vs.days.religious.activity <- days.religious.activity.subset %>%
+  group_by(days.religious.activity) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.days.religious.activity <- mutate(income.gap.t.test.vs.days.religious.activity, days.religious.activity = reorder(days.religious.activity, income.gap))
+
+income.gap.t.test.vs.days.religious.activity.present <- income.gap.t.test.vs.days.religious.activity
+
+income.gap.t.test.vs.days.religious.activity.present <- income.gap.t.test.vs.days.religious.activity.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.days.religious.activity.present <- income.gap.t.test.vs.days.religious.activity.present %>%
+  rename( 'Days Religious Activity' = days.religious.activity,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.days.religious.activity.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 23.199% to 28.321% more than females in their respective religious activity groups. Additionally, it was apparent that the income gap was significant for all of the religious activity groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain religious activity group exacerbates or mitigates the income gap. 
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.days.religious.activity, aes(x = days.religious.activity, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Days Religious Activity") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Days Religious Activity") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals attending no religious activity had the lowest income gap, while individuals attending multiple days of religious activity had the highest income gap. Thus, we observe that attending no religious activity is a mitigating factor to the income gap, while attending multiple days of religious activity is an exacerbating factor to the income gap. Without a clear connection of high earners and religion, it is indeterminable how the truncated 2% data will impact the results.
+
+# Interaction of Biological Mother Birth Age
+
+To explore the interaction of age of the biological mother during her first birth on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+biological.mother.birth.age.subset <- subset(income.final, !is.na(biological.mother.birth.age))
+
+income.gap.t.test.vs.biological.mother.birth.age <- biological.mother.birth.age.subset %>%
+  group_by(biological.mother.birth.age) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.biological.mother.birth.age <- mutate(income.gap.t.test.vs.biological.mother.birth.age, biological.mother.birth.age = fct_relevel(biological.mother.birth.age,
+                                                                                                                                                       "Under 19",
+                                                                                                                                                       "19-21",
+                                                                                                                                                       "22-24",
+                                                                                                                                                       "24-27",
+                                                                                                                                                       "Over 27"))
+
+income.gap.t.test.vs.biological.mother.birth.age.present <- income.gap.t.test.vs.biological.mother.birth.age
+
+income.gap.t.test.vs.biological.mother.birth.age.present <- income.gap.t.test.vs.biological.mother.birth.age.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.biological.mother.birth.age.present <- income.gap.t.test.vs.biological.mother.birth.age.present %>%
+  rename( 'Biological Mother Birth Age' = biological.mother.birth.age,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.biological.mother.birth.age.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 24.435% to 37.725% more than females in their respective biological mother's age at first birth groups. Additionally, it was apparent that the income gap was significant for all of the biological mother's age at first birth groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain biological mother's age at first birth group exacerbates or mitigates the income gap.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.biological.mother.birth.age, aes(x = biological.mother.birth.age, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Biological Mother Birth Age") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Biological Mother Birth Age") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with mother's who were over 27 when they had their first child had the lowest income gap, while individuals with mother's who were between 24 and 27 when they had their first child had the highest income gap. Thus, we observe that having a mother who was over 27 when they had their first child is a mitigating factor to the income gap, while having a mother who was between 24 and 27 when they had their first child is an exacerbating factor to the income gap. As previously stated, most people in the top percents of income earners will be men. Thus, excluding the true values and truncating the data will not skew the impact of a mother's birth age, as this variable deals with women, not men.
+
+# Interaction of Caretaker Relationship to Child
+
+To explore the interaction of the caretaker's relationship to the child on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+parents.relationship.child.subset <- subset(income.final, !is.na(parents.relationship.child))
+
+income.gap.t.test.vs.parents.relationship.child <- parents.relationship.child.subset %>%
+  group_by(parents.relationship.child) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.parents.relationship.child <- mutate(income.gap.t.test.vs.parents.relationship.child, parents.relationship.child = reorder(parents.relationship.child, income.gap))
+
+income.gap.t.test.vs.parents.relationship.child.present <- income.gap.t.test.vs.parents.relationship.child
+
+income.gap.t.test.vs.parents.relationship.child.present <- income.gap.t.test.vs.parents.relationship.child.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.parents.relationship.child.present <- income.gap.t.test.vs.parents.relationship.child.present %>%
+  rename( 'Parent Relationship to Child' = parents.relationship.child,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.parents.relationship.child.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 22.319% less to 37.558% more than females in their respective relationship to caretaker groups. Additionally, it was apparent that the income gap was significant for the relationship to caretaker groups with a biological parent, and not significant otherwise. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain relationship to caretaker group exacerbates or mitigates the income gap.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.parents.relationship.child, aes(x = parents.relationship.child, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Household Net Worth") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Parent Relationship to Childs") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(axis.text.x = element_text(size=8, angle = 55, hjust = 1), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with biological Mother's only had the lowest income gap, while individuals with two parents, biological Mother group had the highest income gap. However, from observing the overall table, it appears that having a biological parent in the household is an exacerbating factor, while not having a biological parent in the household is not significant. Once again, this will be indeterminate, as a top 2% income may not be associated with family status.
+
+# Interaction of Biological Mother's Education
+
+To explore the interaction of biological mother's education level on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+bio.mom.edu.subset <- subset(income.final, !is.na(bio.mom.edu))
+
+income.gap.t.test.vs.bio.mom.edu <- bio.mom.edu.subset %>%
+  group_by(bio.mom.edu) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.bio.mom.edu <- mutate(income.gap.t.test.vs.bio.mom.edu, bio.mom.edu = reorder(bio.mom.edu, income.gap))
+
+income.gap.t.test.vs.bio.mom.edu.present <- income.gap.t.test.vs.bio.mom.edu
+
+income.gap.t.test.vs.bio.mom.edu.present <- income.gap.t.test.vs.bio.mom.edu.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.bio.mom.edu.present <- income.gap.t.test.vs.bio.mom.edu.present %>%
+  rename( "Biological Mother's Education" = bio.mom.edu,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.bio.mom.edu.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 19.401% less to 40.144% more than females in their respective biological Mother's education level groups. additionally, it was apparent that the income gap was significant for all of the biological Mother's education level groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain biological Mother's education level group exacerbates or mitigates the income gap.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.bio.mom.edu, aes(x = bio.mom.edu, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Biological Mother's Education") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Biological Mother's Education") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with biological mothers with no high school education had the lowest income gap, while individuals with biological mother's with a high school education had the highest income gap. Thus, we observe that having a biological mother with no high school education is a mitigating factor to the income gap, while having a biological mother with a high school education is an exacerbating factor to the income gap. However, this warrants further exploration, and we assume the mitigating factor is instead a biological mother with a college education. The truncated data may change the results, but only slightly, as there seems to be a correlation between the amount of education and the income gap. It is good to note the "No High School" category being the lowest, which will be analyzed in the Discussion section.
+
+# Interaction of Biological Father's Education
+
+To explore the interaction of biological father education level on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+bio.dad.edu.subset <- subset(income.final, !is.na(bio.dad.edu))
+
+income.gap.t.test.vs.bio.dad.edu <- bio.dad.edu.subset %>%
+  group_by(bio.dad.edu) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.bio.dad.edu <- mutate(income.gap.t.test.vs.bio.dad.edu, bio.dad.edu = reorder(bio.dad.edu, income.gap))
+
+income.gap.t.test.vs.bio.dad.edu.present <- income.gap.t.test.vs.bio.dad.edu
+
+income.gap.t.test.vs.bio.dad.edu.present <- income.gap.t.test.vs.bio.dad.edu.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.bio.dad.edu.present <- income.gap.t.test.vs.bio.dad.edu.present %>%
+  rename( "Biological Fathers's Education" = bio.dad.edu,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.bio.dad.edu.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 26.466% less to 38.519% more than females in their respective biological Fother's education level groups. additionally, it was apparent that the income gap was significant for all of the biological Father's education level groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain biological Father's education level group exacerbates or mitigates the income gap.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.bio.dad.edu, aes(x = bio.dad.edu, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Biological Fathers's Education") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Biological Fathers's Education") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with biological Fathers with no high school education had the lowest income gap, while individuals with biological Fathers with some high school education had the highest income gap. Thus, we observe that having a biological Father with no high school education is a mitigating factor to the income gap, while having a Father with some high school education is an exacerbating factor to the income gap. However, this warrants further exploration, and we assume the mitigating factor is instead a Father with a college education. The results are quite similar to the ones presented in the previous section. Thus, the fact that there is truncated data may not skew the results significantly.
+
+# Interaction of Caretaker Mother's Education
+
+To explore the interaction of caretaker father education level on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+guard.mom.edu.subset <- subset(income.final, !is.na(guard.mom.edu))
+
+income.gap.t.test.vs.guard.mom.edu <- guard.mom.edu.subset %>%
+  group_by(guard.mom.edu) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.guard.mom.edu <- mutate(income.gap.t.test.vs.guard.mom.edu, guard.mom.edu = reorder(guard.mom.edu, income.gap))
+
+income.gap.t.test.vs.guard.mom.edu.present <- income.gap.t.test.vs.guard.mom.edu
+
+income.gap.t.test.vs.guard.mom.edu.present <- income.gap.t.test.vs.guard.mom.edu.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.guard.mom.edu.present <- income.gap.t.test.vs.guard.mom.edu.present %>%
+  rename( "Caretaker Mother's Education" = guard.mom.edu,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.guard.mom.edu.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 19.723% less to 41.463% more than females in their respective caretaker Mother's education level groups. additionally, it was apparent that the income gap was significant for all of the caretaker Mother's education level groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain caretaker Mother's education level group exacerbates or mitigates the income gap.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.guard.mom.edu, aes(x = guard.mom.edu, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Caretaker Mother's Education") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Guardian Mother's Education") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with caretaker mothers with a college education had the lowest income gap, while individuals with caretaker mother's with a high school education had the highest income gap. Thus, we observe that having a caretaker mother with a college education is a mitigating factor to the income gap, while having a caretaker mother with a high school education is an exacerbating factor to the income gap. The data may skew a bit more in this interaction if the income values were not topcoded due to the significance of college among guardians, which is also seen in the guardian/ caretaker father interaction. Nonetheless, the changes in results will still be trivial. 
+
+# Interaction of Guardian Father's Education
+
+To explore the interaction of caretaker father education level on the income gap between men and women, a t-test was performed on the percent differences within each racial group. The t-test provided insight into the mean percent difference, as well as provided a 95% confidence interval and determination of whether the difference was significant. The finding from that test can be seen below.
+
+```{r, include=FALSE}
+guard.dad.edu.subset <- subset(income.final, !is.na(guard.dad.edu))
+
+income.gap.t.test.vs.guard.dad.edu <- guard.dad.edu.subset %>%
+  group_by(guard.dad.edu) %>%
+  summarize(income.gap = ((mean(income[sex == 'Male'], na.rm = TRUE) - 
+              mean(income[sex == 'Female'], na.rm = TRUE)) / mean(income, na.rm = TRUE)) * 100,
+            upper = (-t.test(income ~ sex)$conf.int[1] / mean(income, na.rm = TRUE)) * 100,
+            lower = (-t.test(income ~ sex)$conf.int[2] / mean(income, na.rm = TRUE)) * 100,
+            p.value = t.test(income ~ sex)$p.value,
+            is.significant = as.numeric(t.test(income ~ sex)$p.value < 0.05))
+
+income.gap.t.test.vs.guard.dad.edu <- mutate(income.gap.t.test.vs.guard.dad.edu, guard.dad.edu = reorder(guard.dad.edu, income.gap))
+
+income.gap.t.test.vs.guard.dad.edu.present <- income.gap.t.test.vs.guard.dad.edu
+
+income.gap.t.test.vs.guard.dad.edu.present <- income.gap.t.test.vs.guard.dad.edu.present %>%
+  mutate(is.significant = recode(is.significant, `0` = 'No', `1` = 'Yes'))
+
+income.gap.t.test.vs.guard.dad.edu.present <- income.gap.t.test.vs.guard.dad.edu.present %>%
+  rename( "Guardian Father's Education" = guard.dad.edu,
+         'Income Gap (%)' = income.gap,
+         'Upper Bound (%)' = upper,
+         'Lower Bound (%)' = lower,
+         'P-Value' = p.value,
+         'Significant?' = is.significant)
+```
+
+```{r, echo = FALSE}
+kable(income.gap.t.test.vs.guard.dad.edu.present, align = 'lcccc', digits = 3)
+```
+
+From looking at the results above, males earned, on average, between 29.245% less to 43.853% more than females in their respective caretaker Father's education level groups. additionally, it was apparent that the income gap was significant for all of the caretaker Father's education level groups. While the results into the income gap are helpful, visualizing the results allowed insight to be derived into whether belonging to certain caretaker Father's education level group exacerbates or mitigates the income gap.
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(data = income.gap.t.test.vs.guard.dad.edu, aes(x = guard.dad.edu, y = income.gap,
+                                         fill = is.significant)) +
+  geom_bar(stat = "identity") +
+  xlab("Guardian Father's Education") + 
+  ylab("Income Gap (%)") +
+  ggtitle("Income Gap between Men and Women, by Guardian Father's Education") + 
+  guides(fill = FALSE) +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.1, size = 1) +
+  theme(text = element_text(size=12), plot.title = element_text(size = 12))
+```
+
+From looking at the bar graph, it appears that individuals with caretaker Fathers with a college education had the lowest income gap, while individuals with caretaker Fathers with some high school education had the highest income gap. Thus, we observe that having a caretaker Father with a college education is a mitigating factor to the income gap, while having a caretaker Father with some high school education is an exacerbating factor to the income gap. Finally, much like the previous interaction, the truncated 2% data will not significantly alter the results.
+
+# Discussion
+The findings clearly demonstrate that there is indeed a statistically significant discrepancy between income across genders. However, some limitations to this model exist. The first limitation is ignoring the respondents' grades and drug usage - personal choices rather than imposed upon them. Furthermore, unidentified confounding variables may affect the overall interaction between variables, leading to different t-values and thus different confidence intervals. Finally, the censoring of top 2% earner data may skew the results, resulting in further differences, meaning that the findings of this paper undermine the true income gap in the United States across gender.
+
+Analyzing the results, some interactions had worthwhile statistics. In the first variable compared to gender, which was age, the discrepancy may arise as men tend to stay in jobs, working more hours, and being more ambitious in their career goals whereas women may be impeded this progress due to the burden of childcare, though this may not always be the case. Another interesting variable was the race interaction. The "Mixed Race" category was the only non-significant category, but this may have been due to data issues, as the spread of the variable was quite large. Further analysis should be conducted on the interaction of Mixed Race and income. Next was religious activity. It was seen that as the days of religious activities increased, the income gap did too. This may happen because of a few reasons; the first reason may be due to time constraints, as more time spent in religious activities may result in less worktime, thus leading to a larger gap. Furthermore, families that engage in increased religious activity may try to uphold "traditional" home values, resulting in women choosing activities that deal with childcare and staying at home while the husband works and earns money for the family, resulting in a higher income gap. Next, the household net worth variable showed some unexpected results, with the respondents with the highest household net worth experiencing the lowest income gap between gender. This may be because if a respondent inherited money from a previous family member, the member may choose to not work and sustain themselves with said money, resulting in a low income for both genders. Furthermore, if the respondents come from a wealthy family, the respondents will have access to better resources, which may mitigate the gender income gap. This explanation may also be applied to the interactions of income and mother's age at birth, as children of older women, who will more likely be financially stable, will have access to valuable resources like schooling that may mitigate the income gap. Finally, education across the four categories showed a strange result. High school education was among the categories that resulted in lower income discrepancy. This may be due to the fact that jobs that only require a high school education may not be quite high paying. Furthermore, the gap decreases as the difference of low paying jobs, such as minimum wage jobs, are not quite big unlike higher paying jobs that include bonuses, for example. Though the graphs showed some interesting results, the insights provided by them are quite valuable and help explain some of the differences in income between gender that this paper has found.
+
+The overall confidence in this paper's findings is very high. Though the limited experience of the group members may influence the accuracy of the model, the conclusions presented by the data are mostly statistically significant, making the conclusions quite believable and reputable.
